@@ -61,7 +61,21 @@ const userSchema = new mongoose.Schema(
       type: String,
       default: null, // Défini par défaut à null
     },
-    selectedDays: {
+    retrievalDays: {
+      type: [String],
+      default: [], // Valeur par défaut est un tableau vide
+    },
+    retrievalTimes: {
+      start: {
+        type: String,
+        default: null, // Défini par défaut à null
+      },
+      end: {
+        type: String,
+        default: null, // Défini par défaut à null
+      },
+    },
+    deliveryDays: {
       type: [String],
       default: [], // Valeur par défaut est un tableau vide
     },
