@@ -6,6 +6,7 @@ const morgan = require("morgan");
 const rateLimit = require("express-rate-limit");
 const connectDB = require("./config/db");
 const authRoutes = require("./routes/authRoutes");
+const storageSpaceRouter = require("./routes/storageSpaceRoutes");
 const errorHandler = require("./middlewares/errorMiddleware");
 const logger = require("./utils/logger");
 const fs = require("fs");
@@ -29,7 +30,14 @@ const app = express();
 
 app.use(express.json());
 app.use(helmet());
-app.use(cors());
+const corsOptions = {
+  origin: "http://localhost:3200",
+  methods: ["GET", "POST", "PUT", "DELETE"],
+  allowedHeaders: ["Content-Type", "Authorization"],
+  credentials: true,
+};
+app.options("*", cors(corsOptions));
+app.use(cors(corsOptions));
 
 app.use(
   morgan("combined", {
@@ -44,9 +52,9 @@ const limiter = rateLimit({
   headers: true,
 });
 app.use(limiter);
-
+app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 app.use("/api/auth", authRoutes);
-
+app.use("/api/storageSpace", storageSpaceRouter);
 app.use(errorHandler);
 
 const PORT = process.env.PORT || 5000;
