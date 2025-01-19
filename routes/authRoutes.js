@@ -1,6 +1,8 @@
 const express = require("express");
-const upload = require("../middlewares/uploadMiddleware");
-const multer = require("multer");
+const {
+  upload,
+  uploadToCloudinary,
+} = require("../middlewares/uploadMiddleware");
 const { registerUser, loginUser } = require("../controllers/authController");
 
 const router = express.Router();
@@ -11,6 +13,7 @@ router.post(
     { name: "profilePhoto", maxCount: 1 },
     { name: "brandLogo", maxCount: 1 },
   ]),
+  uploadToCloudinary,
   registerUser
 );
 

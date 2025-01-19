@@ -56,3 +56,4 @@ coverage/
 
 # React Native
 .expo/
+.vercel

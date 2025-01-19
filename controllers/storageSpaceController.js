@@ -11,7 +11,10 @@ const createStorageSpace = async (req, res) => {
       managerFirstName,
       phone,
     } = req.body;
-    const photo = req.file ? req.file.path : null;
+    const photo = req.uploadedImages
+      ? req.uploadedImages.find((image) => image.field === "photo")?.url
+      : null;
+
     const userId = req.user.id;
 
     const existingStorageSpace = await StorageSpace.findOne({ name });
@@ -83,7 +86,7 @@ const getStorageSpaceById = async (req, res) => {
   }
 };
 
-const updateStorageSpace = async (req, res) => {
+const updateStorageSpace = async (req) => {
   try {
     const {
       name,
@@ -94,18 +97,18 @@ const updateStorageSpace = async (req, res) => {
       managerFirstName,
       phone,
     } = req.body;
-    const photo = req.file ? req.file.path : null;
+    const photo = req.uploadedImages
+      ? req.uploadedImages.find((image) => image.field === "photo")?.url
+      : null;
 
     let storageSpace = await StorageSpace.findById(req.params.id);
 
     if (!storageSpace) {
-      return res
-        .status(404)
-        .json({ message: "Espace de stockage non trouvé." });
+      throw new Error("Espace de stockage non trouvé.");
     }
 
     if (storageSpace.user.toString() !== req.user.id) {
-      return res.status(403).json({ message: "Accès refusé." });
+      throw new Error("Accès refusé.");
     }
 
     storageSpace.name = name || storageSpace.name;
@@ -121,14 +124,14 @@ const updateStorageSpace = async (req, res) => {
 
     await storageSpace.save();
 
-    res
-      .status(200)
-      .json({ message: "Espace de stockage mis à jour avec succès." });
+    return {
+      success: true,
+      message: "Espace de stockage mis à jour avec succès.",
+    };
   } catch (error) {
-    console.error(error);
-    res.status(500).json({
-      message: "Erreur lors de la mise à jour de l'espace de stockage.",
-    });
+    throw new Error(
+      error.message || "Erreur lors de la mise à jour de l'espace de stockage."
+    );
   }
 };
 

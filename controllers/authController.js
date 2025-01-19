@@ -32,12 +32,17 @@ const registerUser = async (req, res) => {
     role,
   } = req.body;
 
-  const profilePhoto = req.files["profilePhoto"]
-    ? `/uploads/${req.files["profilePhoto"][0].filename}`
-    : null;
-  const brandLogo = req.files["brandLogo"]
-    ? `/uploads/${req.files["brandLogo"][0].filename}`
-    : null;
+  const profilePhoto =
+    req.uploadedImages &&
+    req.uploadedImages.find((image) => image.field === "profilePhoto")
+      ? req.uploadedImages.find((image) => image.field === "profilePhoto").url
+      : null;
+
+  const brandLogo =
+    req.uploadedImages &&
+    req.uploadedImages.find((image) => image.field === "brandLogo")
+      ? req.uploadedImages.find((image) => image.field === "brandLogo").url
+      : null;
 
   try {
     const userExists = await User.findOne({ email });
