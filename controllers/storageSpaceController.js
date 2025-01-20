@@ -31,6 +31,7 @@ const createStorageSpace = async (req, res) => {
     const newStorageSpace = new StorageSpace({
       name,
       surface,
+      availableSurface: surface,
       address,
       price,
       managerLastName,
