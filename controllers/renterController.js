@@ -1,6 +1,5 @@
-const StorageSpace = require("../models/StorageSpace");
 const Rental = require("../models/Rental");
-const Product = require("../models/Product");
+const StorageSpace = require("../models/StorageSpace");
 
 // Helper function for error handling
 const handleError = (res, errorMessage, statusCode = 500) => {
