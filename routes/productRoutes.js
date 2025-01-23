@@ -19,6 +19,7 @@ router.post(
   uploadToCloudinary, // Upload to Cloudinary
   createProduct // Handle the rest of the product creation logic
 );
+
 router.delete(
   "/delete/:id",
   protect, // Ensure the user is authenticated
