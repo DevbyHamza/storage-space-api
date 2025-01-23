@@ -8,6 +8,7 @@ const connectDB = require("./config/db");
 const authRoutes = require("./routes/authRoutes");
 const storageSpaceRouter = require("./routes/storageSpaceRoutes");
 const renterRoute = require("./routes/renterRoute");
+const productRouts = require("./routes/productRoutes");
 const errorHandler = require("./middlewares/errorMiddleware");
 const logger = require("./utils/logger");
 dotenv.config();
@@ -51,7 +52,7 @@ app.use(limiter);
 app.use("/api/auth", authRoutes);
 app.use("/api/storageSpace", storageSpaceRouter);
 app.use("/api/renter", renterRoute);
-
+app.use("/api/product", productRouts);
 app.use(errorHandler);
 
 app.use((req, res, next) => {

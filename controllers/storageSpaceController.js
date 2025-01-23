@@ -1,4 +1,4 @@
-const StorageSpace = require("../models/storageSpace");
+const StorageSpace = require("../models/StorageSpace");
 
 const createStorageSpace = async (req, res) => {
   try {
@@ -87,7 +87,7 @@ const getStorageSpaceById = async (req, res) => {
   }
 };
 
-const updateStorageSpace = async (req) => {
+const updateStorageSpace = async (req, res) => {
   try {
     const {
       name,
@@ -105,13 +105,35 @@ const updateStorageSpace = async (req) => {
     let storageSpace = await StorageSpace.findById(req.params.id);
 
     if (!storageSpace) {
-      throw new Error("Espace de stockage non trouvé.");
+      return res
+        .status(404)
+        .json({ message: "Espace de stockage non trouvé." });
     }
 
     if (storageSpace.user.toString() !== req.user.id) {
-      throw new Error("Accès refusé.");
+      return res.status(403).json({ message: "Accès refusé." });
     }
 
+    // Validate rentedSurface against availableSurface if surface changes
+    if (surface && surface !== storageSpace.surface) {
+      // Ensure that availableSurface doesn't exceed the new surface
+      if (storageSpace.rentedSurface > surface) {
+        return res.status(400).json({
+          message:
+            "La surface louée est supérieure à la nouvelle surface disponible.",
+        });
+      }
+
+      // Recalculate available surface based on the new surface
+      storageSpace.availableSurface = surface - storageSpace.rentedSurface;
+
+      // If the availableSurface is negative, set it to 0 (in case surface decreases too much)
+      if (storageSpace.availableSurface < 0) {
+        storageSpace.availableSurface = 0;
+      }
+    }
+
+    // Update the fields
     storageSpace.name = name || storageSpace.name;
     storageSpace.surface = surface || storageSpace.surface;
     storageSpace.address = address || storageSpace.address;
@@ -125,14 +147,16 @@ const updateStorageSpace = async (req) => {
 
     await storageSpace.save();
 
-    return {
-      success: true,
-      message: "Espace de stockage mis à jour avec succès.",
-    };
+    res
+      .status(200)
+      .json({ message: "Espace de stockage mis à jour avec succès." });
   } catch (error) {
-    throw new Error(
-      error.message || "Erreur lors de la mise à jour de l'espace de stockage."
-    );
+    console.error(error);
+    res.status(500).json({
+      message:
+        error.message ||
+        "Erreur lors de la mise à jour de l'espace de stockage.",
+    });
   }
 };
 
