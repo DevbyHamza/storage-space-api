@@ -1,5 +1,5 @@
 const StorageSpace = require("../models/StorageSpace");
-
+console.log(__dirname);
 const createStorageSpace = async (req, res) => {
   try {
     const {
