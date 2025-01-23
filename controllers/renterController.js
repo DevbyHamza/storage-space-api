@@ -1,5 +1,5 @@
 const Rental = require("../models/Rental");
-const StorageSpace = require("../models/StorageSpace");
+const StorageSpace = require("../models/storagespace");
 
 // Helper function for error handling
 const handleError = (res, errorMessage, statusCode = 500) => {
