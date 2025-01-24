@@ -14,6 +14,6 @@ const storageSpaceSchema = new mongoose.Schema({
   user: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
 });
 
-const StorageSpace = mongoose.model("StorageSpace", storageSpaceSchema);
+const storagespace = mongoose.model("storagespace", storageSpaceSchema);
 
-module.exports = StorageSpace;
+module.exports = storagespace;

@@ -1,10 +1,4 @@
-const path = require("path");
-const StorageSpace = require(path.join(
-  __dirname,
-  "..",
-  "models",
-  "storagespace"
-));
+const storagespace = require("../models/storagespace");
 const createStorageSpace = async (req, res) => {
   try {
     const {
@@ -22,7 +16,7 @@ const createStorageSpace = async (req, res) => {
 
     const userId = req.user.id;
 
-    const existingStorageSpace = await StorageSpace.findOne({ name });
+    const existingStorageSpace = await storagespace.findOne({ name });
     if (existingStorageSpace) {
       return res
         .status(400)
@@ -33,7 +27,7 @@ const createStorageSpace = async (req, res) => {
       return res.status(400).json({ message: "La photo est requise." });
     }
 
-    const newStorageSpace = new StorageSpace({
+    const newStorageSpace = new storagespace({
       name,
       surface,
       availableSurface: surface,
@@ -59,7 +53,7 @@ const createStorageSpace = async (req, res) => {
 
 const getAllStorageSpaces = async (req, res) => {
   try {
-    const storageSpaces = await StorageSpace.find({ user: req.user.id });
+    const storageSpaces = await storagespace.find({ user: req.user.id });
     res.status(200).json(storageSpaces);
   } catch (error) {
     console.error(error);
@@ -71,7 +65,7 @@ const getAllStorageSpaces = async (req, res) => {
 
 const getStorageSpaceById = async (req, res) => {
   try {
-    const storageSpace = await StorageSpace.findById(req.params.id);
+    const storageSpace = await storagespace.findById(req.params.id);
 
     if (!storageSpace) {
       return res
@@ -107,7 +101,7 @@ const updateStorageSpace = async (req, res) => {
       ? req.uploadedImages.find((image) => image.field === "photo")?.url
       : null;
 
-    let storageSpace = await StorageSpace.findById(req.params.id);
+    let storageSpace = await storagespace.findById(req.params.id);
 
     if (!storageSpace) {
       return res
@@ -167,7 +161,7 @@ const updateStorageSpace = async (req, res) => {
 
 const deleteStorageSpace = async (req, res) => {
   try {
-    const storageSpace = await StorageSpace.findById(req.params.id);
+    const storageSpace = await storagespace.findById(req.params.id);
 
     if (!storageSpace) {
       return res
@@ -179,7 +173,7 @@ const deleteStorageSpace = async (req, res) => {
       return res.status(403).json({ message: "Accès refusé." });
     }
 
-    await StorageSpace.findByIdAndDelete(req.params.id);
+    await storagespace.findByIdAndDelete(req.params.id);
 
     res
       .status(200)

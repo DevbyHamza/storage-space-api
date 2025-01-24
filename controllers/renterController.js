@@ -1,5 +1,5 @@
 const Rental = require("../models/Rental");
-const StorageSpace = require("../models/storagespace");
+const storagespace = require("../models/storagespace");
 
 // Helper function for error handling
 const handleError = (res, errorMessage, statusCode = 500) => {
@@ -19,7 +19,8 @@ const normalizeDate = (date) => {
 // Get available storage spaces for rent
 const getAvailableStorageSpacesForRenter = async (req, res) => {
   try {
-    const storageSpaces = await StorageSpace.find()
+    const storageSpaces = await storagespace
+      .find()
       .populate(
         "user",
         "retrievalDays retrievalTimes deliveryDays deliveryTimes"
@@ -48,7 +49,7 @@ const validateRentalTransaction = async (req, res) => {
   const renterId = req.user.id;
 
   try {
-    const storageSpace = await StorageSpace.findById(storageId);
+    const storageSpace = await storagespace.findById(storageId);
 
     if (!storageSpace) {
       return res.status(404).json({
@@ -97,7 +98,7 @@ const rentStorageSpace = async (req, res) => {
 
   try {
     // Fetch the storage space
-    const storageSpace = await StorageSpace.findById(storageId);
+    const storageSpace = await storagespace.findById(storageId);
 
     if (!storageSpace) {
       return res
@@ -173,7 +174,7 @@ const getAllRentedStorageSpacesForUser = async (req, res) => {
     const rentals = await Rental.find({ renterId })
       .populate({
         path: "storageId", // Populate the storage space details
-        model: "StorageSpace", // Ensure the model name for storage space is correct
+        model: "storagespace", // Ensure the model name for storage space is correct
       })
       .populate({
         path: "products", // Populate the products array in rental

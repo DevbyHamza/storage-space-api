@@ -9,7 +9,7 @@ const rentalSchema = new mongoose.Schema(
     },
     storageId: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "StorageSpace",
+      ref: "storagespace",
       required: true,
     },
     spaceToRent: {

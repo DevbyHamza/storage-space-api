@@ -39,7 +39,7 @@ const productSchema = new mongoose.Schema(
     },
     rentedSpaceId: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "Rental", // Reference to Rental model instead of StorageSpace
+      ref: "Rental", // Reference to Rental model instead of storagespace
       required: true,
     },
   },
