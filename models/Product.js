@@ -5,6 +5,7 @@ const productSchema = new mongoose.Schema(
     productName: {
       type: String,
       required: true,
+      unique: true, // Ensure uniqueness
     },
     pickupLocation: {
       type: String,
@@ -17,33 +18,37 @@ const productSchema = new mongoose.Schema(
     quantity: {
       type: Number,
       required: true,
-      min: 1, // Ensuring quantity is positive
     },
     price: {
       type: Number,
       required: true,
-      min: 0, // Price must be positive
     },
     area: {
       type: Number,
       required: true,
-      min: 1, // Ensure area is a positive number
     },
     description: {
       type: String,
       required: true,
     },
     productPhoto: {
-      type: String, // Store URL of the image
+      type: String,
       required: true,
+    },
+    stockQuantity: {
+      type: Number,
+      required: true,
+      min: 0, // Ensures stock quantity cannot be negative
     },
     rentedSpaceId: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "Rental", // Reference to Rental model instead of storagespace
+      ref: "Rental",
       required: true,
     },
   },
   { timestamps: true }
 );
 
-module.exports = mongoose.model("Product", productSchema);
+const Product = mongoose.model("Product", productSchema);
+
+module.exports = Product;
