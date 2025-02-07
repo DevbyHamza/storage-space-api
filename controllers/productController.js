@@ -1,7 +1,6 @@
 const Product = require("../models/Product");
 const Rental = require("../models/Rental");
 
-// Create a new product
 const createProduct = async (req, res) => {
   try {
     const {
@@ -15,22 +14,29 @@ const createProduct = async (req, res) => {
       rentedSpaceId,
     } = req.body;
 
-    // Get product photo URL from uploaded images
+    // Check if product name already exists
+    const existingProduct = await Product.findOne({ productName });
+    if (existingProduct) {
+      return res
+        .status(400)
+        .json({ message: "Un produit avec ce nom existe déjà." });
+    }
+
     const productPhoto = req.uploadedImages?.find(
       (image) => image.field === "productPhoto"
     )?.url;
 
     if (!productPhoto) {
-      return res.status(400).json({ message: "Product photo is required." });
+      return res
+        .status(400)
+        .json({ message: "La photo du produit est obligatoire." });
     }
 
-    // Check if the rented space exists
     const rentedSpace = await Rental.findById(rentedSpaceId);
     if (!rentedSpace) {
-      return res.status(400).json({ message: "Rented space not found." });
+      return res.status(400).json({ message: "Espace loué non trouvé." });
     }
 
-    // Create a new product
     const newProduct = new Product({
       productName,
       pickupLocation,
@@ -41,23 +47,26 @@ const createProduct = async (req, res) => {
       description,
       productPhoto,
       rentedSpaceId,
+      stockQuantity: quantity,
     });
 
-    // Save the new product
-    const product = await newProduct.save();
+    // Save the product and update the rental simultaneously
+    const [product] = await Promise.all([
+      newProduct.save(),
+      Rental.findByIdAndUpdate(
+        rentedSpaceId,
+        { $push: { products: newProduct._id } },
+        { new: true }
+      ),
+    ]);
 
-    // Update the rental document by adding the product ID to the products array
-    rentedSpace.products.push(product._id);
-    await rentedSpace.save(); // Save the updated rental document
-
-    // Return the created product and success message
     res.status(201).json({
       success: true,
       message: "Produit créé avec succès !",
       data: product,
     });
   } catch (error) {
-    console.error("Error creating product:", error);
+    console.error("Erreur lors de la création du produit :", error);
     res.status(500).json({
       success: false,
       message: "Une erreur est survenue lors de la création du produit.",
@@ -66,7 +75,6 @@ const createProduct = async (req, res) => {
   }
 };
 
-// Update an existing product
 const updateProduct = async (req, res) => {
   try {
     const { id } = req.params;
@@ -81,13 +89,29 @@ const updateProduct = async (req, res) => {
       rentedSpaceId,
     } = req.body;
 
-    // Find the product by ID
-    let product = await Product.findById(id);
+    const product = await Product.findById(id);
     if (!product) {
-      return res.status(404).json({ message: "Product not found." });
+      return res.status(404).json({ message: "Produit non trouvé." });
     }
 
-    // Update the product fields
+    // Check if product name already exists, excluding the current product
+    const existingProduct = await Product.findOne({
+      productName,
+      _id: { $ne: id },
+    });
+    if (existingProduct) {
+      return res
+        .status(400)
+        .json({ message: "Un produit avec ce nom existe déjà." });
+    }
+
+    if (rentedSpaceId) {
+      const rentedSpace = await Rental.findById(rentedSpaceId);
+      if (!rentedSpace) {
+        return res.status(400).json({ message: "Espace loué non trouvé." });
+      }
+    }
+
     product.productName = productName || product.productName;
     product.pickupLocation = pickupLocation || product.pickupLocation;
     product.brand = brand || product.brand;
@@ -97,26 +121,22 @@ const updateProduct = async (req, res) => {
     product.description = description || product.description;
     product.rentedSpaceId = rentedSpaceId || product.rentedSpaceId;
 
-    // Handle photo update
-    if (req.uploadedImages && req.uploadedImages.length > 0) {
+    if (req.uploadedImages?.length > 0) {
       const updatedPhoto = req.uploadedImages.find(
         (image) => image.field === "productPhoto"
       )?.url;
-      if (updatedPhoto) {
-        product.productPhoto = updatedPhoto;
-      }
+      if (updatedPhoto) product.productPhoto = updatedPhoto;
     }
 
-    // Save the updated product
-    product = await product.save();
+    const updatedProduct = await product.save();
 
     res.status(200).json({
       success: true,
       message: "Produit mis à jour avec succès !",
-      data: product,
+      data: updatedProduct,
     });
   } catch (error) {
-    console.error("Error updating product:", error);
+    console.error("Erreur lors de la mise à jour du produit :", error);
     res.status(500).json({
       success: false,
       message: "Une erreur est survenue lors de la mise à jour du produit.",
@@ -130,27 +150,75 @@ const deleteProduct = async (req, res) => {
   try {
     const { id } = req.params;
 
-    // Find the product by ID
     const product = await Product.findById(id);
     if (!product) {
-      return res.status(404).json({ message: "Product not found." });
+      return res.status(404).json({ message: "Produit non trouvé." });
     }
 
-    // Remove the product from any Rental document that contains it
-    await Rental.updateMany({ products: id }, { $pull: { products: id } });
-
-    // Delete the product
-    await Product.findByIdAndDelete(id);
+    await Promise.all([
+      Rental.updateMany({ products: id }, { $pull: { products: id } }),
+      Product.findByIdAndDelete(id),
+    ]);
 
     res.status(200).json({
       success: true,
       message: "Produit supprimé avec succès !",
     });
   } catch (error) {
-    console.error("Error deleting product:", error);
+    console.error("Erreur lors de la suppression du produit :", error);
     res.status(500).json({
       success: false,
       message: "Une erreur est survenue lors de la suppression du produit.",
+      error: error.message,
+    });
+  }
+};
+
+const getProducts = async (req, res) => {
+  try {
+    const products = await Product.find()
+      .populate({
+        path: "rentedSpaceId",
+        match: { active: true }, // Only include active rentals
+        select: "storageId renterId",
+        populate: {
+          path: "storageId",
+          select: "user", // Ensure we get the user reference
+          populate: {
+            path: "user",
+            select: "retrievalTimes retrievalDays",
+          },
+        },
+      })
+      .lean(); // Converts Mongoose documents to plain JSON
+
+    // Flatten the response by extracting retrievalDays and retrievalTimes
+    const flattenedProducts = products.map((product) => {
+      const rentedSpace = product.rentedSpaceId;
+      const storageSpace = rentedSpace?.storageId;
+      const supplierId = rentedSpace?.renterId;
+      const user = storageSpace?.user;
+
+      return {
+        ...product,
+        retrievalTimes: user?.retrievalTimes || null,
+        retrievalDays: user?.retrievalDays || null,
+        rentedSpaceId: rentedSpace?._id || null,
+        storageId: storageSpace?._id || null,
+        supplierId: supplierId?._id || null,
+      };
+    });
+
+    res.status(200).json({
+      success: true,
+      message: "Produits récupérés avec succès.",
+      data: flattenedProducts,
+    });
+  } catch (error) {
+    console.error("Erreur lors de la récupération des produits :", error);
+    res.status(500).json({
+      success: false,
+      message: "Une erreur est survenue lors de la récupération des produits.",
       error: error.message,
     });
   }
@@ -160,4 +228,5 @@ module.exports = {
   createProduct,
   updateProduct,
   deleteProduct,
+  getProducts,
 };
