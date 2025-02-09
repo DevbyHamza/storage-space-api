@@ -8,7 +8,7 @@ const registerUser = async (req, res) => {
   if (!errors.isEmpty()) {
     return res.status(400).json({ errors: errors.array() });
   }
-
+  a;
   const {
     name,
     firstName,
@@ -175,34 +175,35 @@ const loginUser = async (req, res) => {
   }
 };
 
-
 const updateProfile = async (req, res) => {
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
     return res.status(400).json({ errors: errors.array() });
   }
 
-  const { 
-    name, 
-    firstName, 
-    address, 
-    fixedPhone, 
-    mobilePhone, 
-    companyName, 
-    tradeName, 
-    SIRET, 
-    deliveryTimes, 
-    deliveryDays, 
-    retrievalTimes, 
-    retrievalDays 
+  const {
+    name,
+    firstName,
+    address,
+    fixedPhone,
+    mobilePhone,
+    companyName,
+    tradeName,
+    SIRET,
+    deliveryTimes,
+    deliveryDays,
+    retrievalTimes,
+    retrievalDays,
   } = req.body;
 
-  const profilePhoto = req.uploadedImages &&
+  const profilePhoto =
+    req.uploadedImages &&
     req.uploadedImages.find((image) => image.field === "profilePhoto")
       ? req.uploadedImages.find((image) => image.field === "profilePhoto").url
       : null;
 
-  const brandLogo = req.uploadedImages &&
+  const brandLogo =
+    req.uploadedImages &&
     req.uploadedImages.find((image) => image.field === "brandLogo")
       ? req.uploadedImages.find((image) => image.field === "brandLogo").url
       : null;
@@ -210,7 +211,7 @@ const updateProfile = async (req, res) => {
   try {
     // Ensure the user is authenticated
     const userId = req.user.id; // Assuming the user is authenticated and their ID is stored in req.user (from JWT middleware)
-    
+
     const user = await User.findById(userId);
     if (!user) {
       return res.status(404).json({ message: "Utilisateur non trouvé" });
@@ -270,5 +271,4 @@ const updateProfile = async (req, res) => {
   }
 };
 
-
-module.exports = { registerUser, loginUser ,updateProfile};
+module.exports = { registerUser, loginUser, updateProfile };
