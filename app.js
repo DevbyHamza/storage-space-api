@@ -11,6 +11,7 @@ const renterRoute = require("./routes/renterRoute");
 const productRouts = require("./routes/productRoutes");
 const orderRoutes = require("./routes/orderRoutes");
 const errorHandler = require("./middlewares/errorMiddleware");
+const webhookRoutes = require("./routes/webhookRoutes");
 const logger = require("./utils/logger");
 dotenv.config();
 if (!process.env.JWT_SECRET || !process.env.MONGO_URI) {
@@ -55,6 +56,7 @@ app.use("/api/storageSpace", storageSpaceRouter);
 app.use("/api/renter", renterRoute);
 app.use("/api/product", productRouts);
 app.use("/api/orders", orderRoutes);
+app.use("/api/webhook", webhookRoutes);
 app.use(errorHandler);
 
 app.use((req, res, next) => {
