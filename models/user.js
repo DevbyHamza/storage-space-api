@@ -117,6 +117,10 @@ const userSchema = new mongoose.Schema(
       required: [true, "Le rôle est requis"],
       enum: ["lessor", "artisan", "consumer"],
     },
+    stripeAccountId: {
+      type: String,
+      default: null,
+    },
   },
   { timestamps: true }
 );

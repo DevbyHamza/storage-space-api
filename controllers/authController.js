@@ -2,13 +2,12 @@ const User = require("../models/user");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const { validationResult } = require("express-validator");
-
+const stripe = require("stripe")(process.env.STRIPE_SECRET_KEY);
 const registerUser = async (req, res) => {
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
     return res.status(400).json({ errors: errors.array() });
   }
-
   const {
     name,
     firstName,
@@ -108,6 +107,7 @@ const registerUser = async (req, res) => {
         hasInsuranceExtension: user.hasInsuranceExtension,
         plansToSubscribeInsurance: user.plansToSubscribeInsurance,
         role: user.role,
+        stripeAccountId: user.stripeAccountId,
       },
       token,
     });
@@ -166,6 +166,7 @@ const loginUser = async (req, res) => {
         hasInsuranceExtension: user.hasInsuranceExtension,
         plansToSubscribeInsurance: user.plansToSubscribeInsurance,
         role: user.role,
+        stripeAccountId: user.stripeAccountId,
       },
       token,
     });
@@ -175,34 +176,35 @@ const loginUser = async (req, res) => {
   }
 };
 
-
 const updateProfile = async (req, res) => {
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
     return res.status(400).json({ errors: errors.array() });
   }
 
-  const { 
-    name, 
-    firstName, 
-    address, 
-    fixedPhone, 
-    mobilePhone, 
-    companyName, 
-    tradeName, 
-    SIRET, 
-    deliveryTimes, 
-    deliveryDays, 
-    retrievalTimes, 
-    retrievalDays 
+  const {
+    name,
+    firstName,
+    address,
+    fixedPhone,
+    mobilePhone,
+    companyName,
+    tradeName,
+    SIRET,
+    deliveryTimes,
+    deliveryDays,
+    retrievalTimes,
+    retrievalDays,
   } = req.body;
 
-  const profilePhoto = req.uploadedImages &&
+  const profilePhoto =
+    req.uploadedImages &&
     req.uploadedImages.find((image) => image.field === "profilePhoto")
       ? req.uploadedImages.find((image) => image.field === "profilePhoto").url
       : null;
 
-  const brandLogo = req.uploadedImages &&
+  const brandLogo =
+    req.uploadedImages &&
     req.uploadedImages.find((image) => image.field === "brandLogo")
       ? req.uploadedImages.find((image) => image.field === "brandLogo").url
       : null;
@@ -210,7 +212,7 @@ const updateProfile = async (req, res) => {
   try {
     // Ensure the user is authenticated
     const userId = req.user.id; // Assuming the user is authenticated and their ID is stored in req.user (from JWT middleware)
-    
+
     const user = await User.findById(userId);
     if (!user) {
       return res.status(404).json({ message: "Utilisateur non trouvé" });
@@ -262,6 +264,7 @@ const updateProfile = async (req, res) => {
         hasInsuranceExtension: user.hasInsuranceExtension, // Send but not update
         plansToSubscribeInsurance: user.plansToSubscribeInsurance, // Send but not update
         role: user.role, // Send but not update
+        stripeAccountId: user.stripeAccountId,
       },
     });
   } catch (err) {
@@ -269,6 +272,34 @@ const updateProfile = async (req, res) => {
     res.status(500).json({ message: err.message });
   }
 };
+const onboardUser = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const user = await User.findById(userId);
 
+    if (!user) {
+      return res.status(404).json({ message: "Utilisateur non trouvé" });
+    }
 
-module.exports = { registerUser, loginUser ,updateProfile};
+    // Create a Stripe account but DO NOT save it in the database yet
+    const account = await stripe.accounts.create({
+      type: "standard",
+      email: user.email,
+    });
+
+    // Generate onboarding link
+    const accountLink = await stripe.accountLinks.create({
+      account: account.id, // Use new account ID
+      refresh_url: `${process.env.FRONTEND_URL}/dashboard`,
+      return_url: `${process.env.FRONTEND_URL}/dashboard`,
+      type: "account_onboarding",
+    });
+
+    res.status(200).json({ url: accountLink.url, stripeAccountId: account.id });
+  } catch (error) {
+    console.error("Erreur lors de la connexion à Stripe :", error);
+    res.status(500).json({ message: "Impossible de connecter Stripe" });
+  }
+};
+
+module.exports = { registerUser, loginUser, updateProfile, onboardUser };
