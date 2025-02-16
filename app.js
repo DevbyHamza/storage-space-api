@@ -8,15 +8,21 @@ const connectDB = require("./config/db");
 const authRoutes = require("./routes/authRoutes");
 const storageSpaceRouter = require("./routes/storageSpaceRoutes");
 const renterRoute = require("./routes/renterRoute");
-const productRouts = require("./routes/productRoutes");
+const productRoutes = require("./routes/productRoutes");
 const orderRoutes = require("./routes/orderRoutes");
 const errorHandler = require("./middlewares/errorMiddleware");
 const webhookRoutes = require("./routes/webhookRoutes");
 const logger = require("./utils/logger");
 
 dotenv.config();
-if (!process.env.JWT_SECRET || !process.env.MONGO_URI) {
-  console.error("Variables d'environnement requises manquantes");
+
+if (
+  !process.env.JWT_SECRET ||
+  !process.env.MONGO_URI ||
+  !process.env.STRIPE_SECRET_KEY ||
+  !process.env.STRIPE_WEBHOOK_SECRET
+) {
+  console.error("❌ Variables d'environnement requises manquantes");
   process.exit(1);
 }
 
@@ -28,14 +34,9 @@ app.get("/", (req, res) => {
   res.send("Le serveur fonctionne !");
 });
 
-// 🔥 Apply express.json() globally *EXCEPT* for Stripe Webhooks
-app.use((req, res, next) => {
-  if (req.originalUrl === "/api/webhook/stripe") {
-    next(); // Skip JSON middleware for Stripe Webhook
-  } else {
-    express.json()(req, res, next);
-  }
-});
+// ✅ Middleware Order: Apply express.raw() **only** for Stripe Webhooks
+app.use("/api/webhook/stripe", express.raw({ type: "application/json" }));
+app.use(express.json()); // Apply JSON parsing everywhere else
 
 app.use(helmet());
 
@@ -52,22 +53,21 @@ app.use(
 );
 
 app.set("trust proxy", 1);
+
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 100,
   message: "Trop de requêtes depuis cette IP, veuillez réessayer plus tard.",
   headers: true,
 });
+
 app.use(limiter);
 
-// ✅ Use express.raw() only for Stripe Webhook
-app.use("/api/webhook/stripe", express.raw({ type: "application/json" }));
-app.use("/api/webhook", webhookRoutes); // Load webhook routes after raw body
-
+app.use("/api/webhook", webhookRoutes);
 app.use("/api/auth", authRoutes);
 app.use("/api/storageSpace", storageSpaceRouter);
 app.use("/api/renter", renterRoute);
-app.use("/api/product", productRouts);
+app.use("/api/product", productRoutes);
 app.use("/api/orders", orderRoutes);
 app.use(errorHandler);
 
@@ -77,7 +77,7 @@ app.use((req, res, next) => {
 
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
-  console.log(`Serveur en cours d'exécution sur le port ${PORT}`);
+  console.log(`✅ Serveur en cours d'exécution sur le port ${PORT}`);
 });
 
 module.exports = app;

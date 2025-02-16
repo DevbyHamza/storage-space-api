@@ -12,7 +12,7 @@ const stripeWebhook = async (req, res) => {
       process.env.STRIPE_WEBHOOK_SECRET
     );
   } catch (err) {
-    console.error("⚠️  Erreur Webhook Stripe :", err.message);
+    console.error("⚠️ Erreur Webhook Stripe :", err.message);
     return res.status(400).send(`Erreur Webhook : ${err.message}`);
   }
 
@@ -24,22 +24,21 @@ const stripeWebhook = async (req, res) => {
         let user = await User.findOne({ stripeAccountId: account.id });
 
         if (!user) {
-          user = await User.findOne({ email: account.email });
-
-          if (user) {
-            user.stripeAccountId = account.id; // Sauvegarder Stripe ID
-            await user.save();
-            console.log(
-              `✅ Utilisateur ${user.email} a complété l'onboarding Stripe.`
-            );
-          }
+          console.warn(
+            `⚠️ Aucun utilisateur trouvé avec stripeAccountId ${account.id}`
+          );
+          return res.status(404).json({ error: "Utilisateur non trouvé" });
         }
+
+        console.log(
+          `✅ Utilisateur ${user.email} a complété l'onboarding Stripe.`
+        );
       }
     }
 
     res.status(200).json({ received: true });
   } catch (error) {
-    console.error("⚠️  Erreur traitement webhook :", error);
+    console.error("⚠️ Erreur traitement webhook :", error);
     res.status(500).json({ error: "Échec du traitement du webhook" });
   }
 };
