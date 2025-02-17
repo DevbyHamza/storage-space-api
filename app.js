@@ -10,42 +10,44 @@ const storageSpaceRouter = require("./routes/storageSpaceRoutes");
 const renterRoute = require("./routes/renterRoute");
 const productRoutes = require("./routes/productRoutes");
 const orderRoutes = require("./routes/orderRoutes");
+const webhookRoutes = require("./routes/webhookRoutes"); // ✅ Webhook route
 const errorHandler = require("./middlewares/errorMiddleware");
-const webhookRoutes = require("./routes/webhookRoutes");
 const logger = require("./utils/logger");
 
 dotenv.config();
 
+// ✅ Ensure required environment variables exist
 if (
   !process.env.JWT_SECRET ||
   !process.env.MONGO_URI ||
   !process.env.STRIPE_SECRET_KEY ||
   !process.env.STRIPE_WEBHOOK_SECRET
 ) {
-  console.error("❌ Variables d'environnement requises manquantes");
+  console.error("❌ Missing required environment variables");
   process.exit(1);
 }
 
+// ✅ Connect to MongoDB
 connectDB();
 
 const app = express();
 
+// ✅ Root Route
 app.get("/", (req, res) => {
-  res.send("Le serveur fonctionne !");
+  res.send("Server is running!");
 });
 
-// ✅ Middleware Order: Apply express.raw() **only** for Stripe Webhooks
-app.use("/api/webhook/stripe", express.raw({ type: "application/json" }));
-app.use(express.json()); // Apply JSON parsing everywhere else
+// ✅ Middleware Order (Important)
+app.use("/api/webhook/stripe", express.raw({ type: "application/json" })); // 🔥 Required for Stripe Webhooks
+app.use(express.json()); // ✅ Applied AFTER webhook to avoid interference
 
+// ✅ Security & Logging Middleware
 app.use(helmet());
-
 app.use(
   cors({
     origin: "*",
   })
 );
-
 app.use(
   morgan("combined", {
     stream: { write: (message) => logger.info(message.trim()) },
@@ -54,30 +56,36 @@ app.use(
 
 app.set("trust proxy", 1);
 
+// ✅ Rate Limiting to Prevent Abuse
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 100,
-  message: "Trop de requêtes depuis cette IP, veuillez réessayer plus tard.",
+  message: "Too many requests from this IP, please try again later.",
   headers: true,
 });
 
 app.use(limiter);
 
+// ✅ Routes
 app.use("/api/webhook", webhookRoutes);
 app.use("/api/auth", authRoutes);
 app.use("/api/storageSpace", storageSpaceRouter);
 app.use("/api/renter", renterRoute);
 app.use("/api/product", productRoutes);
 app.use("/api/orders", orderRoutes);
+
+// ✅ Custom Error Handling Middleware
 app.use(errorHandler);
 
-app.use((req, res, next) => {
-  res.status(404).json({ message: "Route non trouvée" });
+// ✅ 404 Handler for Unmatched Routes
+app.use((req, res) => {
+  res.status(404).json({ message: "Route not found" });
 });
 
+// ✅ Start the Server
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
-  console.log(`✅ Serveur en cours d'exécution sur le port ${PORT}`);
+  console.log(`✅ Server running on port ${PORT}`);
 });
 
 module.exports = app;
