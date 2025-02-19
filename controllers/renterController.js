@@ -92,18 +92,18 @@ const validateRentalTransaction = async (req, res) => {
 };
 
 // Rent a storage space
-const rentStorageSpace = async (req, res) => {
-  const { storageId, spaceToRent, startDate, endDate } = req.body;
-  const renterId = req.user.id;
-
+const rentStorageSpace = async ({
+  storageId,
+  spaceToRent,
+  startDate,
+  endDate,
+  renterId,
+}) => {
   try {
     // Fetch the storage space
     const storageSpace = await storagespace.findById(storageId);
-
     if (!storageSpace) {
-      return res
-        .status(404)
-        .json({ message: "Espace de stockage non trouvé." });
+      throw new Error("Espace de stockage non trouvé.");
     }
 
     // Check if the user has already rented this storage space
@@ -111,18 +111,13 @@ const rentStorageSpace = async (req, res) => {
       renterId,
       storageId,
     });
-
     if (existingRental) {
-      return res.status(400).json({
-        message: "Vous avez déjà loué cet espace de stockage.",
-      });
+      throw new Error("Vous avez déjà loué cet espace de stockage.");
     }
 
     // Check available surface for the rental
     if (storageSpace.availableSurface < spaceToRent) {
-      return res.status(400).json({
-        message: "Surface disponible insuffisante pour cette location.",
-      });
+      throw new Error("Surface disponible insuffisante pour cette location.");
     }
 
     // Normalize dates
@@ -155,17 +150,14 @@ const rentStorageSpace = async (req, res) => {
     });
 
     await newRental.save();
-
-    res.status(200).json({
-      message: active
-        ? "Espace de stockage loué avec succès et est maintenant actif."
-        : "Espace de stockage réservé avec succès.",
-    });
   } catch (error) {
-    console.error("Error during storage rental:", error);
-    handleError(res, "Erreur lors de la réservation de l'espace de stockage.");
+    // Rethrow the error to be handled at a higher level
+    throw new Error(
+      error.message || "Erreur lors de la réservation de l'espace de stockage."
+    );
   }
 };
+
 const getAllRentedStorageSpacesForUser = async (req, res) => {
   const renterId = req.user.id;
 

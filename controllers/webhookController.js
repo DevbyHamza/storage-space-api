@@ -35,22 +35,18 @@ const stripeWebhook = async (req, res) => {
       const account = event.data.object;
 
       if (account.charges_enabled && account.payouts_enabled) {
-        let user = await User.findOne({ stripeAccountId: account.id });
+        const user = await User.findOne({ email: account.email });
 
-        if (!user) {
-          user = await User.findOne({ email: account.email });
-
-          if (user) {
-            user.stripeAccountId = account.id;
-            await user.save();
-            console.log(
-              `✅ Utilisateur ${user.email} a complété l'onboarding Stripe.`
-            );
-          } else {
-            console.warn(
-              `⚠️ Aucun utilisateur trouvé pour Stripe ID: ${account.id}`
-            );
-          }
+        if (user) {
+          user.stripeAccountId = account.id;
+          await user.save();
+          console.log(
+            `✅ Utilisateur ${user.email} a complété l'onboarding Stripe.`
+          );
+        } else {
+          console.warn(
+            `⚠️ Aucun utilisateur trouvé pour Stripe ID: ${account.id}`
+          );
         }
       }
     }
