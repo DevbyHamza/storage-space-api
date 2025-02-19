@@ -3,7 +3,7 @@ const express = require("express");
 const router = express.Router();
 const {
   getAvailableStorageSpacesForRenter,
-  rentStorageSpace,
+  // rentStorageSpace,
   getAllRentedStorageSpacesForUser,
   validateRentalTransaction,
 } = require("../controllers/renterController");
@@ -14,7 +14,7 @@ router.get(
   protect,
   getAvailableStorageSpacesForRenter
 );
-router.post("/complete-rental", protect, rentStorageSpace);
+// router.post("/complete-rental", protect, rentStorageSpace);
 
 router.get("/rented-storage", protect, getAllRentedStorageSpacesForUser);
 router.post("/validate-rental-request", protect, validateRentalTransaction);

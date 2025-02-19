@@ -295,7 +295,15 @@ const onboardUser = async (req, res) => {
       type: "account_onboarding",
     });
 
-    res.status(200).json({ url: accountLink.url, stripeAccountId: account.id });
+    // Save the Stripe account ID to the user's record in the database
+    user.stripeAccountId = account.id;
+    await user.save();
+
+    // Respond with the onboarding URL and the Stripe account ID
+    res.status(200).json({
+      url: accountLink.url,
+      stripeAccountId: account.id, // Returning the account ID
+    });
   } catch (error) {
     console.error("Erreur lors de la connexion à Stripe :", error);
     res.status(500).json({ message: "Impossible de connecter Stripe" });
