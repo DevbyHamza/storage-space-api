@@ -115,7 +115,7 @@ const userSchema = new mongoose.Schema(
     role: {
       type: String,
       required: [true, "Le rôle est requis"],
-      enum: ["lessor", "artisan", "consumer"],
+      enum: ["lessor", "artisan", "consumer", "Admin"],
     },
     stripeAccountId: {
       type: String,

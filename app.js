@@ -14,6 +14,7 @@ const webhookRoutes = require("./routes/webhookRoutes");
 const errorHandler = require("./middlewares/errorMiddleware");
 const storageCheckoutRoutes = require("./routes/storageCheckoutRoutes");
 const productCheckoutRoutes = require("./routes/productCheckoutRoutes");
+const adminRoutes = require("./routes/adminRoutes");
 const logger = require("./utils/logger");
 
 dotenv.config();
@@ -73,12 +74,10 @@ app.use((req, res, next) => {
     return next(); // Skip rate limit for webhook
   }
   limiter(req, res, next);
-});
-
-// ✅ Rate Limiting to Prevent Abuse
+}); 
 const limiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
-  max: 100,
+  windowMs: 10 * 60 * 1000,
+  max: 200,
   message: "Too many requests from this IP, please try again later.",
   headers: true,
 });
@@ -94,6 +93,7 @@ app.use("/api/product", productRoutes);
 app.use("/api/orders", orderRoutes);
 app.use("/api/storagepayment", storageCheckoutRoutes);
 app.use("/api/product-payment", productCheckoutRoutes);
+app.use("/api/admin", adminRoutes);
 
 // ✅ Custom Error Handling Middleware
 app.use(errorHandler);
