@@ -2,6 +2,7 @@ const User = require("../models/user");
 const WebhookLog = require("../models/WebhookLog");
 const Payout = require("../models/Payout");
 const Order = require("../models/Order");
+const Transaction = require("../models/Transaction"); // ✅ Added transaction model
 const { placeOrder } = require("./OrderController");
 const { rentStorageSpace } = require("./renterController");
 const stripe = require("stripe")(process.env.STRIPE_SECRET_KEY);
@@ -85,18 +86,17 @@ const stripeWebhook = async (req, res) => {
         renterId,
       } = session.metadata;
 
-      // 🔹 Vérifier si la session a déjà été traitée
-      const existingOrder = await Order.findOne({
-        stripeSessionId: session.id,
+      // 🔹 Vérifier si la transaction a déjà été enregistrée
+      const existingTransaction = await Transaction.findOne({
+        stripeTransactionId: session.id,
       });
-      if (existingOrder) {
-        console.log(
-          `⚠️ Commande déjà créée pour cette session Stripe: ${session.id}`
-        );
+
+      if (existingTransaction) {
+        console.log(`⚠️ Transaction déjà enregistrée: ${session.id}`);
       } else {
         try {
           if (storageId && spaceToRent && startDate && endDate && renterId) {
-            // Handle storage space rental
+            // ✅ Handle storage space rental
             await rentStorageSpace({
               storageId,
               spaceToRent,
@@ -104,9 +104,18 @@ const stripeWebhook = async (req, res) => {
               endDate,
               renterId,
             });
-            console.log(
-              `✅ Paiement confirmé et espace loué pour Renter: ${renterId}`
-            );
+
+            await Transaction.create({
+              stripeTransactionId: session.id,
+              buyerId: renterId,
+              sellerId: sellerId,
+              amount: session.amount_total / 100,
+              currency: session.currency,
+              status: "réussi",
+              type: "location_espace",
+            });
+
+            console.log(`✅ Espace loué pour Renter: ${renterId}`);
           } else if (
             storageId &&
             productId &&
@@ -115,17 +124,26 @@ const stripeWebhook = async (req, res) => {
             buyerId &&
             sellerId
           ) {
-            // Handle product purchase
+            // ✅ Handle product purchase
             await placeOrder({
               storageId,
               item: { productId, quantity, price },
               buyerId,
-              sellerId, // 🔹 Inclure le vendeur pour suivi des paiements
-              stripeSessionId: session.id, // 🔹 Stocker l'ID Stripe pour éviter les doublons
+              sellerId,
+              stripeSessionId: session.id,
             });
-            console.log(
-              `✅ Paiement confirmé et commande créée pour l'acheteur: ${buyerId}`
-            );
+
+            await Transaction.create({
+              stripeTransactionId: session.id,
+              buyerId: buyerId,
+              sellerId: sellerId,
+              amount: session.amount_total / 100,
+              currency: session.currency,
+              status: "réussi",
+              type: "achat_produit",
+            });
+
+            console.log(`✅ Produit acheté par: ${buyerId}`);
           } else {
             console.error(
               `❌ Métadonnées invalides pour la session ${session.id}`
@@ -138,10 +156,7 @@ const stripeWebhook = async (req, res) => {
         }
       }
     }
-    console.log(
-      "checkout.session.completed",
-      event.type === "checkout.session.completed"
-    );
+
     // ✅ Handle "payout.created" event
     if (event.type === "payout.created") {
       const payout = event.data.object;
@@ -165,6 +180,18 @@ const stripeWebhook = async (req, res) => {
           status: payout.status,
           createdAt: new Date(payout.created * 1000),
         });
+
+        await Transaction.create({
+          stripeTransactionId: payout.id,
+          buyerId: null, // No buyer for payouts
+          sellerId: payout.destination,
+          amount: payout.amount / 100,
+          currency: payout.currency,
+          status: payout.status === "paid" ? "réussi" : "en attente",
+          type: "payout",
+        });
+
+        console.log(`✅ Payout enregistré pour ${payout.destination}`);
       }
     }
 
@@ -177,12 +204,19 @@ const stripeWebhook = async (req, res) => {
         } ${payout.currency.toUpperCase()}`
       );
 
-      // 🔹 Mettre à jour le statut de l'échec au lieu de créer un doublon
       await Payout.findOneAndUpdate(
         { stripePayoutId: payout.id },
         { status: "failed" },
         { upsert: true }
       );
+
+      await Transaction.findOneAndUpdate(
+        { stripeTransactionId: payout.id },
+        { status: "échoué" },
+        { upsert: true }
+      );
+
+      console.log(`❌ Payout marqué comme échoué: ${payout.id}`);
     }
 
     res.status(200).json({ received: true });
