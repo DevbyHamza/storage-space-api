@@ -8,13 +8,6 @@ const {
 
 const router = express.Router();
 
-// Place Order Route
-router.post(
-  "/placeOrder",
-  protect, // Ensure the user is authenticated
-  placeOrder // Handle placing an order
-);
-
 // Update Order Status Route
 router.put(
   "/updateStatus/:orderId", // Update order status by order ID

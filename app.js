@@ -13,6 +13,7 @@ const orderRoutes = require("./routes/orderRoutes");
 const webhookRoutes = require("./routes/webhookRoutes");
 const errorHandler = require("./middlewares/errorMiddleware");
 const storageCheckoutRoutes = require("./routes/storageCheckoutRoutes");
+const productCheckoutRoutes = require("./routes/productCheckoutRoutes");
 const logger = require("./utils/logger");
 
 dotenv.config();
@@ -92,6 +93,7 @@ app.use("/api/renter", renterRoute);
 app.use("/api/product", productRoutes);
 app.use("/api/orders", orderRoutes);
 app.use("/api/storagepayment", storageCheckoutRoutes);
+app.use("/api/product-payment", productCheckoutRoutes);
 
 // ✅ Custom Error Handling Middleware
 app.use(errorHandler);

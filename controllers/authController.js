@@ -281,31 +281,44 @@ const onboardUser = async (req, res) => {
       return res.status(404).json({ message: "Utilisateur non trouvé" });
     }
 
-    // Create a Stripe account but DO NOT save it in the database yet
-    const account = await stripe.accounts.create({
-      type: "standard",
-      email: user.email,
-    });
+    let stripeAccountId = user.stripeAccountId;
+    if (!stripeAccountId) {
+      const account = await stripe.accounts.create({
+        type: "express",
+        email: user.email,
+        country: "FR",
+        capabilities: {
+          transfers: { requested: true },
+        },
+        settings: {
+          payouts: {
+            schedule: {
+              interval: "weekly",
+              weekly_anchor: "monday",
+            },
+          },
+        },
+      });
 
-    // Generate onboarding link
+      stripeAccountId = account.id;
+      user.stripeAccountId = stripeAccountId;
+      await user.save();
+    }
+
+    // ✅ Create onboarding link
     const accountLink = await stripe.accountLinks.create({
-      account: account.id, // Use new account ID
-      refresh_url: `${process.env.FRONTEND_URL}/profile`,
-      return_url: `${process.env.FRONTEND_URL}/profile`,
+      account: stripeAccountId,
+      refresh_url: `${process.env.FRONTEND_URL}/connexion`,
+      return_url: `${process.env.FRONTEND_URL}/connexion`,
       type: "account_onboarding",
     });
 
-    // Save the Stripe account ID to the user's record in the database
-    user.stripeAccountId = account.id;
-    await user.save();
-
-    // Respond with the onboarding URL and the Stripe account ID
     res.status(200).json({
       url: accountLink.url,
-      stripeAccountId: account.id, // Returning the account ID
+      stripeAccountId: stripeAccountId,
     });
   } catch (error) {
-    console.error("Erreur lors de la connexion à Stripe :", error);
+    console.error("❌ Erreur lors de la connexion à Stripe :", error);
     res.status(500).json({ message: "Impossible de connecter Stripe" });
   }
 };

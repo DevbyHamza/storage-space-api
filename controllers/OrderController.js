@@ -13,17 +13,20 @@ const generateUniqueOrderNumber = async () => {
 };
 
 // Place an Order
-const placeOrder = async (req, res) => {
+const placeOrder = async ({ storageId, item, buyerId, stripeSessionId }) => {
   try {
-    const { storageId, item } = req.body;
-    const userId = req.user.id;
-
     // Validate if the storage exists
     const storage = await storagespace.findById(storageId);
     if (!storage) {
-      return res
-        .status(404)
-        .json({ message: "Espace de stockage non trouvé." });
+      throw new Error("Espace de stockage non trouvé.");
+    }
+
+    // 🔍 Check if the order already exists (to prevent duplicates)
+    const existingOrder = await Order.findOne({ stripeSessionId });
+
+    if (existingOrder) {
+      console.log("✅ Commande déjà existante, pas de duplication.");
+      return existingOrder;
     }
 
     // Generate a unique order number
@@ -36,11 +39,12 @@ const placeOrder = async (req, res) => {
     const newOrder = new Order({
       orderNumber,
       storageId,
-      productId: item.productId, // Assuming item contains productId and quantity
+      productId: item.productId,
       quantity: item.quantity,
       totalPrice,
-      status: "À récupérer", // Default status is "À récupérer"
-      user: userId, // Save the user who placed the order
+      status: "À récupérer",
+      user: buyerId,
+      stripeSessionId, // ✅ Save Stripe session ID to track order uniqueness
     });
 
     // Save the new order
@@ -49,34 +53,22 @@ const placeOrder = async (req, res) => {
     // Update the product's stock quantity after order placement
     const product = await Product.findById(item.productId);
     if (!product) {
-      return res
-        .status(404)
-        .json({ message: "Produit non trouvé pour la commande." });
+      throw new Error("Produit non trouvé pour la commande.");
     }
 
     // Check if the requested quantity is available
     if (product.stockQuantity < item.quantity) {
-      return res.status(400).json({
-        message: "Quantité en stock insuffisante pour cette commande.",
-      });
+      throw new Error("Quantité en stock insuffisante pour cette commande.");
     }
 
     // Deduct the stock quantity
     product.stockQuantity -= item.quantity;
-    await product.save(); // Save the updated product stock quantity
+    await product.save();
 
-    res.status(201).json({
-      success: true,
-      message: "Commande créée et stock mise à jour avec succès !",
-      data: savedOrder,
-    });
+    return savedOrder;
   } catch (error) {
-    console.error("Erreur lors de la création de la commande :", error);
-    res.status(500).json({
-      success: false,
-      message: "Une erreur est survenue lors de la création de la commande.",
-      error: error.message,
-    });
+    console.error("❌ Erreur lors de la création de la commande :", error);
+    throw new Error(error.message);
   }
 };
 

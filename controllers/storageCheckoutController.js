@@ -81,18 +81,12 @@ const handlePaymentSuccess = async (req, res) => {
       totalPrice,
       renterId,
     } = session.metadata;
-    console.log("body", session.metadata);
-    await rentStorageSpace({
-      storageId,
-      spaceToRent,
-      startDate,
-      endDate,
-      renterId,
-    });
+
+    console.log("✅ Paiement réussi, aucune action requise ici.");
 
     res.json({
       success: true,
-      message: "Paiement réussi, espace de stockage loué avec succès",
+      message: "Paiement confirmé avec succès.",
       metadata: {
         spaceName,
         spaceToRent,
@@ -103,14 +97,10 @@ const handlePaymentSuccess = async (req, res) => {
       },
     });
   } catch (error) {
-    console.error(
-      "Erreur lors de la récupération des données de la session",
-      error
-    );
+    console.error("❌ Erreur récupération session Stripe :", error);
     res.status(500).json({ error: "Erreur interne du serveur" });
   }
 };
-
 module.exports = {
   createCheckoutSession,
   handlePaymentSuccess,
