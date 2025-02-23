@@ -272,43 +272,6 @@ const updateProfile = async (req, res) => {
     res.status(500).json({ message: err.message });
   }
 };
-// const onboardUser = async (req, res) => {
-//   try {
-//     const userId = req.user.id;
-//     const user = await User.findById(userId);
-
-//     if (!user) {
-//       return res.status(404).json({ message: "Utilisateur non trouvé" });
-//     }
-
-//     // Create a Stripe account but DO NOT save it in the database yet
-//     const account = await stripe.accounts.create({
-//       type: "standard",
-//       email: user.email,
-//     });
-
-//     // Generate onboarding link
-//     const accountLink = await stripe.accountLinks.create({
-//       account: account.id, // Use new account ID
-//       refresh_url: `${process.env.FRONTEND_URL}/connexion`,
-//       return_url: `${process.env.FRONTEND_URL}/connexion`,
-//       type: "account_onboarding",
-//     });
-
-//     // Save the Stripe account ID to the user's record in the database
-//     user.stripeAccountId = account.id;
-//     await user.save();
-
-//     // Respond with the onboarding URL and the Stripe account ID
-//     res.status(200).json({
-//       url: accountLink.url,
-//       stripeAccountId: account.id, // Returning the account ID
-//     });
-//   } catch (error) {
-//     console.error("Erreur lors de la connexion à Stripe :", error);
-//     res.status(500).json({ message: "Impossible de connecter Stripe" });
-//   }
-// };
 const onboardUser = async (req, res) => {
   try {
     const userId = req.user.id;
@@ -319,7 +282,6 @@ const onboardUser = async (req, res) => {
     }
 
     let stripeAccountId = user.stripeAccountId;
-
     if (!stripeAccountId) {
       const account = await stripe.accounts.create({
         type: "express",
@@ -327,6 +289,14 @@ const onboardUser = async (req, res) => {
         country: "FR",
         capabilities: {
           transfers: { requested: true },
+        },
+        settings: {
+          payouts: {
+            schedule: {
+              interval: "weekly",
+              weekly_anchor: "monday",
+            },
+          },
         },
       });
 

@@ -13,12 +13,20 @@ const generateUniqueOrderNumber = async () => {
 };
 
 // Place an Order
-const placeOrder = async ({ storageId, item, buyerId }) => {
+const placeOrder = async ({ storageId, item, buyerId, stripeSessionId }) => {
   try {
     // Validate if the storage exists
     const storage = await storagespace.findById(storageId);
     if (!storage) {
       throw new Error("Espace de stockage non trouvé.");
+    }
+
+    // 🔍 Check if the order already exists (to prevent duplicates)
+    const existingOrder = await Order.findOne({ stripeSessionId });
+
+    if (existingOrder) {
+      console.log("✅ Commande déjà existante, pas de duplication.");
+      return existingOrder;
     }
 
     // Generate a unique order number
@@ -36,6 +44,7 @@ const placeOrder = async ({ storageId, item, buyerId }) => {
       totalPrice,
       status: "À récupérer",
       user: buyerId,
+      stripeSessionId, // ✅ Save Stripe session ID to track order uniqueness
     });
 
     // Save the new order
@@ -56,10 +65,10 @@ const placeOrder = async ({ storageId, item, buyerId }) => {
     product.stockQuantity -= item.quantity;
     await product.save();
 
-    return savedOrder; // ✅ Return the created order instead of sending response
+    return savedOrder;
   } catch (error) {
-    console.error("Erreur lors de la création de la commande :", error);
-    throw new Error(error.message); // ✅ Throw error so it can be caught in `handleProductPaymentSuccess`
+    console.error("❌ Erreur lors de la création de la commande :", error);
+    throw new Error(error.message);
   }
 };
 

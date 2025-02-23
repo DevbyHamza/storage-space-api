@@ -21,12 +21,18 @@ const orderSchema = new mongoose.Schema(
     totalPrice: { type: Number, required: true },
     status: {
       type: String,
-      enum: ["À récupérer", "Récupéré"], // Status options
-      default: "À récupérer", // Default status is "À récupérer"
+      enum: ["À récupérer", "Récupéré"],
+      default: "À récupérer",
     },
-    user: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true }, // Reference to the user
+    user: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
+
+    stripeSessionId: {
+      type: String,
+      unique: true, // ✅ Ensures only one order per Stripe session
+      required: true,
+    },
   },
-  { timestamps: true } // This will automatically add createdAt and updatedAt fields
+  { timestamps: true }
 );
 
 const Order = mongoose.model("Order", orderSchema);

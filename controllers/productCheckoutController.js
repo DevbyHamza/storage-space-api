@@ -2,40 +2,43 @@ const Stripe = require("stripe");
 const Product = require("../models/Product");
 const Order = require("../models/Order");
 const { placeOrder } = require("./orderController");
+const User = require("../models/user");
 const stripe = Stripe(process.env.STRIPE_SECRET_KEY);
 
 const createProductCheckoutSession = async (req, res) => {
   try {
-    const { storageId, item, userId } = req.body; // ✅ userId is the seller (supplier)
-    const { productId, quantity, price } = item;
-    const buyerId = req.user.id; // ✅ The user making the purchase
+    const { storageId, item, supplierId } = req.body;
+    if (!storageId || !item || !supplierId) {
+      return res.status(400).json({ error: "Données manquantes." });
+    }
 
-    // Retrieve product details
+    const { productId, quantity, price } = item;
+    const buyerId = req.user.id;
+
+    // 🔹 Vérifier l'existence du produit
     const product = await Product.findById(productId);
     if (!product) {
       return res.status(404).json({ error: "Produit introuvable." });
     }
 
-    // Check stock availability
+    // 🔹 Vérifier la quantité en stock
     if (product.stockQuantity < quantity) {
-      return res.status(400).json({ error: "Stock insuffisant." });
+      return res.status(409).json({ error: "Stock insuffisant." });
     }
 
-    // Calculate total price
-    const totalPrice = price * quantity;
-
-    // 🔹 Find the seller's Stripe account ID
-    const seller = await User.findById(userId); // ✅ Seller is the userId in req.body
+    // 🔹 Trouver le compte Stripe du vendeur
+    const seller = await User.findById(supplierId);
     if (!seller || !seller.stripeAccountId) {
       return res
         .status(400)
         .json({ error: "Le vendeur n'a pas de compte Stripe lié." });
     }
 
-    // Define platform fee (e.g., 10% of the total price)
-    const platformFee = Math.round(totalPrice * 0.1 * 100); // 10% fee in cents
+    // 🔹 Calcul du prix total et des frais de plateforme
+    const totalPrice = parseFloat(price).toFixed(2) * quantity;
+    const platformFee = Math.round(totalPrice * 0.1 * 100); // 10% de frais en centimes
 
-    // Create Stripe checkout session
+    // 🔹 Création de la session Stripe
     const session = await stripe.checkout.sessions.create({
       payment_method_types: ["card"],
       line_items: [
@@ -43,22 +46,22 @@ const createProductCheckoutSession = async (req, res) => {
           price_data: {
             currency: "eur",
             product_data: {
-              name: product.name,
+              name: product.productName,
               description: product.description,
             },
-            unit_amount: price * 100, // Convert to cents
+            unit_amount: Math.round(parseFloat(price).toFixed(2) * 100), // Conversion en centimes
           },
           quantity: quantity,
         },
       ],
       mode: "payment",
       payment_intent_data: {
-        application_fee_amount: platformFee, // ✅ Platform takes 10% fee
+        application_fee_amount: platformFee,
         transfer_data: {
-          destination: seller.stripeAccountId, // ✅ Payment goes to seller's Stripe account
+          destination: seller.stripeAccountId,
         },
       },
-      success_url: `${process.env.FRONTEND_URL}/product-listing?session_id={CHECKOUT_SESSION_ID}`,
+      success_url: `${process.env.FRONTEND_URL}/ProductPaymentSuccess?session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${process.env.FRONTEND_URL}/product-listing`,
       metadata: {
         storageId,
@@ -66,8 +69,8 @@ const createProductCheckoutSession = async (req, res) => {
         quantity,
         price,
         totalPrice,
-        buyerId, // ✅ Store buyer's user ID
-        sellerId: userId, // ✅ Store seller's Stripe account ID
+        buyerId,
+        sellerId: supplierId,
       },
     });
 
@@ -77,36 +80,34 @@ const createProductCheckoutSession = async (req, res) => {
       "Erreur lors de la création de la session de paiement :",
       error
     );
-    res.status(500).json({ error: "Erreur interne du serveur." });
+
+    let errorMessage = "Erreur interne du serveur.";
+    if (error.type === "StripeInvalidRequestError") {
+      errorMessage = "Erreur Stripe : Requête invalide.";
+    } else if (error.type === "StripeAPIError") {
+      errorMessage = "Erreur de communication avec Stripe.";
+    }
+
+    res.status(500).json({ error: errorMessage });
   }
 };
-
 const handleProductPaymentSuccess = async (req, res) => {
   try {
     const { session_id } = req.query;
     const session = await stripe.checkout.sessions.retrieve(session_id);
-    const { storageId, productId, quantity, price, buyerId } = session.metadata;
 
-    console.log("Paiement réussi, création de la commande...");
-
-    // Call placeOrder function
-    const savedOrder = await placeOrder({
-      storageId,
-      item: { productId, quantity, price },
-      buyerId,
-    });
+    console.log(`✅ Paiement confirmé pour session_id: ${session_id}`);
 
     res.json({
       success: true,
-      message: "Paiement réussi, commande créée avec succès.",
-      data: savedOrder,
+      message: "Paiement confirmé avec succès.",
+      metadata: session.metadata,
     });
   } catch (error) {
-    console.error("Erreur lors du traitement du paiement :", error);
+    console.error("❌ Erreur lors du traitement du paiement :", error);
     res.status(500).json({ success: false, error: error.message });
   }
 };
-
 module.exports = {
   createProductCheckoutSession,
   handleProductPaymentSuccess,
