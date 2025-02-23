@@ -1,7 +1,6 @@
 const express = require("express");
 const protect = require("../middlewares/authMiddleware");
 const {
-  placeOrder,
   updateOrderStatus,
   getOrders,
 } = require("../controllers/OrderController");

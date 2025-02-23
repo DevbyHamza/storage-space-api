@@ -1,7 +1,5 @@
 const Stripe = require("stripe");
 const Product = require("../models/Product");
-const Order = require("../models/Order");
-const { placeOrder } = require("./orderController");
 const User = require("../models/user");
 const stripe = Stripe(process.env.STRIPE_SECRET_KEY);
 
