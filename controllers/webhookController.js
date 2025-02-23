@@ -2,7 +2,7 @@ const User = require("../models/user");
 const WebhookLog = require("../models/WebhookLog");
 const Payout = require("../models/Payout");
 const Order = require("../models/Order");
-const { placeOrder } = require("./orderController");
+const { placeOrder } = require("./OrderController");
 const { rentStorageSpace } = require("./renterController");
 const stripe = require("stripe")(process.env.STRIPE_SECRET_KEY);
 
