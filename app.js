@@ -96,15 +96,12 @@ app.use("/api/storagepayment", storageCheckoutRoutes);
 app.use("/api/product-payment", productCheckoutRoutes);
 app.use("/api/admin", adminRoutes);
 
-// ✅ Middleware de gestion des erreurs personnalisées
 app.use(errorHandler);
 
-// ✅ Gestion des routes inexistantes (404)
 app.use((req, res) => {
   res.status(404).json({ message: "Route non trouvée", apiVersion: "v1" });
 });
 
-// ✅ Démarrage du serveur
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
   console.log(`✅ Serveur en cours d'exécution sur le port ${PORT}`);

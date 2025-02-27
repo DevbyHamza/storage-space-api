@@ -35,9 +35,9 @@ const rentalSchema = new mongoose.Schema(
     products: [
       {
         type: mongoose.Schema.Types.ObjectId,
-        ref: "Product", // Reference to the Product model
+        ref: "Product",
       },
-    ], // Array of product references
+    ],
   },
   { timestamps: true }
 );
