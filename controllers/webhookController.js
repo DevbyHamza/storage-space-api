@@ -17,24 +17,18 @@ const stripeWebhook = async (req, res) => {
       sig,
       process.env.STRIPE_WEBHOOK_SECRET
     );
-
-    console.log(`✅ Webhook reçu : ${event.type}`);
   } catch (err) {
     console.error("⚠️ Erreur Webhook Stripe :", err.message);
     return res.status(400).json({ error: `Erreur Webhook : ${err.message}` });
   }
 
   try {
-    // ✅ Log the webhook event in DB
     await WebhookLog.create({
       eventId: event.id,
       eventType: event.type,
       payload: event,
     });
 
-    console.log(`📌 Webhook sauvegardé en DB: ${event.id}`);
-
-    // ✅ Handle "account.updated" event
     if (event.type === "account.updated") {
       const account = event.data.object;
       if (
@@ -47,25 +41,17 @@ const stripeWebhook = async (req, res) => {
         if (user) {
           user.stripeOnboardingCompleted = true;
           await user.save();
-          console.log(
-            `✅ Utilisateur ${user._id} a terminé l'onboarding Stripe.`
-          );
         } else {
           console.warn(
             `⚠️ Aucun utilisateur trouvé pour Stripe ID: ${account.id}`
           );
         }
-      } else {
-        console.log(`⚠️ Compte Stripe ${account.id} n'est pas encore activé.`);
       }
     }
 
-    // ✅ Handle "checkout.session.completed" event
     if (event.type === "checkout.session.completed") {
       const session = event.data.object;
-      console.log(`🔍 Traitement de la session de paiement: ${session.id}`);
 
-      // 🔹 Validate metadata
       if (!session.metadata) {
         console.error(`❌ Session Stripe sans metadata: ${session.id}`);
         return res
@@ -86,17 +72,14 @@ const stripeWebhook = async (req, res) => {
         renterId,
       } = session.metadata;
 
-      // 🔹 Vérifier si la transaction a déjà été enregistrée
       const existingTransaction = await Transaction.findOne({
         stripeTransactionId: session.id,
       });
 
       if (existingTransaction) {
-        console.log(`⚠️ Transaction déjà enregistrée: ${session.id}`);
       } else {
         try {
           if (storageId && spaceToRent && startDate && endDate && renterId) {
-            // ✅ Handle storage space rental
             await rentStorageSpace({
               storageId,
               spaceToRent,
@@ -114,8 +97,6 @@ const stripeWebhook = async (req, res) => {
               status: "réussi",
               type: "location_espace",
             });
-
-            console.log(`✅ Espace loué pour Renter: ${renterId}`);
           } else if (
             storageId &&
             productId &&
@@ -124,7 +105,6 @@ const stripeWebhook = async (req, res) => {
             buyerId &&
             sellerId
           ) {
-            // ✅ Handle product purchase
             await placeOrder({
               storageId,
               item: { productId, quantity, price },
@@ -142,8 +122,6 @@ const stripeWebhook = async (req, res) => {
               status: "réussi",
               type: "achat_produit",
             });
-
-            console.log(`✅ Produit acheté par: ${buyerId}`);
           } else {
             console.error(
               `❌ Métadonnées invalides pour la session ${session.id}`
@@ -156,17 +134,9 @@ const stripeWebhook = async (req, res) => {
         }
       }
     }
-
-    // ✅ Handle "payout.created" event
     if (event.type === "payout.created") {
       const payout = event.data.object;
-      console.log(
-        `✅ Payout de $${
-          payout.amount / 100
-        } ${payout.currency.toUpperCase()} créé pour ${payout.destination}`
-      );
 
-      // 🔹 Vérifier si le payout existe déjà
       const existingPayout = await Payout.findOne({
         stripePayoutId: payout.id,
       });
@@ -190,8 +160,6 @@ const stripeWebhook = async (req, res) => {
           status: payout.status === "paid" ? "réussi" : "en attente",
           type: "payout",
         });
-
-        console.log(`✅ Payout enregistré pour ${payout.destination}`);
       }
     }
 
@@ -215,8 +183,6 @@ const stripeWebhook = async (req, res) => {
         { status: "échoué" },
         { upsert: true }
       );
-
-      console.log(`❌ Payout marqué comme échoué: ${payout.id}`);
     }
 
     res.status(200).json({ received: true });

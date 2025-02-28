@@ -19,35 +19,35 @@ const logger = require("./utils/logger");
 
 dotenv.config();
 
-// ✅ Ensure required environment variables exist
+// ✅ Vérification des variables d'environnement requises
 if (
   !process.env.JWT_SECRET ||
   !process.env.MONGO_URI ||
   !process.env.STRIPE_SECRET_KEY ||
   !process.env.STRIPE_WEBHOOK_SECRET
 ) {
-  console.error("❌ Missing required environment variables");
+  console.error("❌ Variables d'environnement manquantes");
   process.exit(1);
 }
 
-// ✅ Connect to MongoDB
+// ✅ Connexion à MongoDB
 connectDB().catch((err) => {
-  console.error("❌ Failed to connect to DB", err);
+  console.error("❌ Échec de la connexion à la base de données", err);
   process.exit(1);
 });
 
 const app = express();
 
-// ✅ Root Route
+// ✅ Route principale
 app.get("/", (req, res) => {
-  res.send("Server is running!");
+  res.send("Le serveur fonctionne !");
 });
 
-// ✅ Middleware Order (Important)
+// ✅ Ordre des middlewares (important)
 app.use("/api/webhook/stripe", express.raw({ type: "application/json" }));
 app.use(express.json());
 
-// ✅ Security & Logging Middleware
+// ✅ Sécurité et journalisation
 app.use(
   helmet({
     contentSecurityPolicy: {
@@ -68,17 +68,18 @@ app.use(
 
 app.set("trust proxy", 1);
 
-// ✅ Rate Limiting (Exclude Webhooks)
+// ✅ Limitation du taux de requêtes (exclure les webhooks)
 app.use((req, res, next) => {
   if (req.originalUrl.startsWith("/api/webhook")) {
-    return next(); // Skip rate limit for webhook
+    return next(); // Ignorer la limitation pour les webhooks
   }
   limiter(req, res, next);
-}); 
+});
 const limiter = rateLimit({
   windowMs: 10 * 60 * 1000,
   max: 200,
-  message: "Too many requests from this IP, please try again later.",
+  message:
+    "Trop de requêtes depuis cette adresse IP, veuillez réessayer plus tard.",
   headers: true,
 });
 
@@ -95,22 +96,19 @@ app.use("/api/storagepayment", storageCheckoutRoutes);
 app.use("/api/product-payment", productCheckoutRoutes);
 app.use("/api/admin", adminRoutes);
 
-// ✅ Custom Error Handling Middleware
 app.use(errorHandler);
 
-// ✅ 404 Handler for Unmatched Routes
 app.use((req, res) => {
-  res.status(404).json({ message: "Route not found", apiVersion: "v1" });
+  res.status(404).json({ message: "Route non trouvée", apiVersion: "v1" });
 });
 
-// ✅ Start the Server
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
-  console.log(`✅ Server running on port ${PORT}`);
+  console.log(`✅ Serveur en cours d'exécution sur le port ${PORT}`);
 });
 
 process.on("SIGINT", () => {
-  console.log("💀 Shutting down gracefully...");
+  console.log("💀 Arrêt en cours...");
   process.exit(0);
 });
 
