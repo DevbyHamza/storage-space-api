@@ -33,7 +33,7 @@ router.put(
       if (req.files && req.files.photo && req.files.photo.length > 0) {
         await uploadToCloudinary(req, res, () => {});
       }
-      const result = await updateStorageSpace(req);
+      const result = await updateStorageSpace(req, res);
       res.status(200).json(result);
     } catch (error) {
       console.error(error);

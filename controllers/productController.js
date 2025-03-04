@@ -179,21 +179,27 @@ const getProducts = async (req, res) => {
     const products = await Product.find()
       .populate({
         path: "rentedSpaceId",
-        match: { active: true }, // Only include active rentals
+        match: { active: true },
         select: "storageId renterId",
         populate: {
           path: "storageId",
-          select: "user", // Ensure we get the user reference
+          select: "user",
           populate: {
             path: "user",
             select: "retrievalTimes retrievalDays",
           },
         },
       })
-      .lean(); // Converts Mongoose documents to plain JSON
+      .lean();
 
-    // Flatten the response by extracting retrievalDays and retrievalTimes
-    const flattenedProducts = products.map((product) => {
+    console.log("products", products);
+
+    // Filter products to include only those with an active rentedSpaceId
+    const activeProducts = products.filter(
+      (product) => product.rentedSpaceId !== null
+    );
+
+    const flattenedProducts = activeProducts.map((product) => {
       const rentedSpace = product.rentedSpaceId;
       const storageSpace = rentedSpace?.storageId;
       const supplierId = rentedSpace?.renterId;
@@ -209,6 +215,8 @@ const getProducts = async (req, res) => {
       };
     });
 
+    console.log("flattenedProducts", flattenedProducts);
+
     res.status(200).json({
       success: true,
       message: "Produits récupérés avec succès.",
@@ -223,7 +231,6 @@ const getProducts = async (req, res) => {
     });
   }
 };
-
 module.exports = {
   createProduct,
   updateProduct,
