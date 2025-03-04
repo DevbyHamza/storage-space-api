@@ -38,7 +38,7 @@ const productSchema = new mongoose.Schema(
     stockQuantity: {
       type: Number,
       required: true,
-      min: 0, // Ensures stock quantity cannot be negative
+      min: 0,
     },
     rentedSpaceId: {
       type: mongoose.Schema.Types.ObjectId,
