@@ -308,8 +308,8 @@ const onboardUser = async (req, res) => {
     // ✅ Create onboarding link
     const accountLink = await stripe.accountLinks.create({
       account: stripeAccountId,
-      refresh_url: `${process.env.FRONTEND_URL}/connexion`,
-      return_url: `${process.env.FRONTEND_URL}/connexion`,
+      refresh_url: `${process.env.FRONTEND_URL}connexion`,
+      return_url: `${process.env.FRONTEND_URL}connexion`,
       type: "account_onboarding",
     });
 

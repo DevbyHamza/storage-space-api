@@ -59,8 +59,8 @@ const createProductCheckoutSession = async (req, res) => {
           destination: seller.stripeAccountId,
         },
       },
-      success_url: `${process.env.FRONTEND_URL}/ProductPaymentSuccess?session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${process.env.FRONTEND_URL}/product-listing`,
+      success_url: `${process.env.FRONTEND_URL}ProductPaymentSuccess?session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: `${process.env.FRONTEND_URL}product-listing`,
       metadata: {
         storageId,
         productId,
