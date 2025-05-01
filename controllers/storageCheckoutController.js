@@ -16,7 +16,7 @@ const createCheckoutSession = async (req, res) => {
     }
 
     const landlordStripeAccountId = storageData.user.stripeAccountId;
-
+    const sellerId = storageData.user._id.toString();
     const formattedStartDate = moment(startDate).format("YYYY-MM-DD");
     const formattedEndDate = moment(endDate).format("YYYY-MM-DD");
 
@@ -37,12 +37,13 @@ const createCheckoutSession = async (req, res) => {
         },
       ],
       mode: "payment",
-      success_url: `${process.env.FRONTEND_URL}/Storagepaymentsuccess?session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${process.env.FRONTEND_URL}/search`,
+      success_url: `${process.env.FRONTEND_URL}Storagepaymentsuccess?session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: `${process.env.FRONTEND_URL}search`,
       metadata: {
         storageId,
         spaceName,
         spaceToRent,
+        sellerId,
         startDate: formattedStartDate,
         endDate: formattedEndDate,
         totalPrice,
@@ -78,6 +79,7 @@ const handlePaymentSuccess = async (req, res) => {
       spaceToRent,
       startDate,
       endDate,
+      sellerId,
       totalPrice,
       renterId,
     } = session.metadata;
@@ -91,6 +93,7 @@ const handlePaymentSuccess = async (req, res) => {
         spaceName,
         spaceToRent,
         startDate,
+        sellerId,
         endDate,
         totalPrice,
         renterId,
